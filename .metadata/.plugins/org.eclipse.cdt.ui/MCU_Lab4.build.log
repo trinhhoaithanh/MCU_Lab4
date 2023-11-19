@@ -1,0 +1,10 @@
+23:17:09 **** Incremental Build of configuration Debug for project MCU_Lab4 ****
+make -j8 all 
+arm-none-eabi-size   MCU_Lab4.elf 
+   text	   data	    bss	    dec	    hex	filename
+  16308	    120	   1864	  18292	   4774	MCU_Lab4.elf
+Finished building: default.size.stdout
+ 
+
+23:17:10 Build Finished. 0 errors, 0 warnings. (took 516ms)
+
