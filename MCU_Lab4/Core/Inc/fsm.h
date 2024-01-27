@@ -13,21 +13,13 @@
 #include<stdio.h>
 #include "software_timer.h"
 
-#define MAX_BUFFER_SIZE 40
+#define MAX_BUFFER_SIZE 30
 
 #define START 0
-#define FIRST_CMD 1
-#define GOT_S 2
-#define GOT_T 3
-#define GOT_K 4
-#define SEND 5
-#define HALT 6
+#define RECEIVING 1
 
-#define SENDING 7
-#define STOP_SEND 8
+#define SENDING 2
 
-#define RECEIVE_CMD	0
-#define ADC_SEND 1
 
 #define START_STRING '!'
 #define END_STRING '#'

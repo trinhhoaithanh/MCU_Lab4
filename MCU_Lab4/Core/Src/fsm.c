@@ -15,71 +15,91 @@ uint8_t buffer[MAX_BUFFER_SIZE];
 uint8_t index_buffer = 0;
 uint8_t buffer_flag = 0;
 
-uint8_t cmd_flag;
+uint8_t cmd_flag = 0, cmd_data[30];
 
-uint32_t ADC_Value = 0;
+int status = START;
+char str[50];
 
-int stat = START;
-int comm_stat = RECEIVE_CMD;
+void clear_buffer(){
+	memset(buffer, 0, sizeof(buffer));
+	index_buffer = 0;
+}
 
 void command_parser_fsm(){
-	switch(stat){
+	switch(status){
 	case START:
-		if( buffer[index_buffer - 1]== START_STRING) stat = FIRST_CMD;
-		break;
-	case FIRST_CMD:
-		if(buffer[index_buffer - 1] == 'R'){
-			stat = GOT_S;
+		if( temp == '!'){
+			clear_buffer();
+			status = RECEIVING;
 		}
-		else if(buffer[index_buffer - 1] == 'O'){
-			stat = GOT_K;
-		}
-		else stat = START;
+		clear_buffer();
 		break;
-	case GOT_S:
-		if(buffer[index_buffer - 1] == 'S'){
-			stat = GOT_T;
+	case RECEIVING:
+		if(index_buffer == 0){
+			status = START;
 		}
-		else stat = START;
-		break;
-	case GOT_T:
-		if(buffer[index_buffer - 1] == 'T'){
-			stat = SEND;
+		else if(temp == '#'){
+			memcpy(cmd_data, buffer, sizeof(cmd_data));
+			cmd_flag = 1;
+			status = START;
+			HAL_UART_Transmit(&huart2, (void*)str, sprintf(str, "\r\n"), 50);
 		}
-		else stat = START;
-		break;
-	case GOT_K:
-		if(buffer[index_buffer - 1] == 'K'){
-			stat = HALT;
+		else if(temp == '!'){
+			clear_buffer();
 		}
-		else stat = START;
-		break;
-	case SEND:
-		if(buffer[index_buffer - 1] == END_STRING){
-			cmd_flag = SENDING;
-			stat = START;
-		}
-		else stat = START;
-		break;
-	case HALT:
-		if(buffer[index_buffer - 1] == END_STRING){
-			cmd_flag = STOP_SEND;
-			stat = START;
-		}
-		break;
-
-	default:
-		stat = START;
 		break;
 	}
 }
 
+uint32_t ADC_Value = 0;
+uint8_t uart_communication_state = START, cmd_ok[3] = {'O','K','#'}, cmd_rst[4] = {'R','S','T','#'}, compare[30];
+char str[50];
 void uart_communication_fsm(){
-	char writeStr[50];
-	if(timer1_flag == 1){
-		if(cmd_flag == SENDING){
-			HAL_UART_Transmit(&huart2, (void*)writeStr, sprintf( writeStr, "!ADC=%ld#", ADC_Value), 1000);
-			setTimer1(300);
-		}
+	switch(uart_communication_state){
+		case START:
+			if(cmd_flag == 1){
+				cmd_flag = 0;
+
+//				Compare !RST#
+				memset(compare, 0, sizeof(compare));
+				memcpy(compare, cmd_rst, sizeof(cmd_rst));
+
+				if(memcmp(cmd_data, compare, sizeof(cmd_data)) == 0){
+					setTimer2(11);
+					HAL_ADC_Start(&hadc1);
+					ADC_Value = HAL_ADC_GetValue(&hadc1);
+					HAL_ADC_Stop(&hadc1);
+					uart_communication_state = SENDING;
+				}
+				else{
+					HAL_UART_Transmit(&huart2, (void*) str, sprintf(str, "\r\nIt's not !RST#\r\n"), 300);
+				}
+
+			}
+			break;
+		case SENDING:
+			if(cmd_flag == 1){
+				cmd_flag = 0;
+
+				//Compare to !OK#
+				memset(compare, 0, sizeof(compare));
+				memcpy(compare, cmd_ok, sizeof(cmd_rst));
+
+				if(memcmp(cmd_data, compare, sizeof(cmd_data)) == 0){
+					uart_communication_state = START;
+					break;
+				}
+				else{
+					HAL_UART_Transmit(&huart2, (void*) str, sprintf(str, "It's not !OK#\r\n"), 300);
+				}
+			}
+
+			if(timer2_flag == 1){
+				HAL_GPIO_TogglePin(LED_YELLOW_GPIO_Port, LED_YELLOW_Pin);
+				setTimer2(300);
+				HAL_UART_Transmit(&huart2, (void*) str, sprintf(str, "\r\n!ADC=%ld#\r\n", ADC_Value), 200);
+			}
+			break;
+
 	}
 }

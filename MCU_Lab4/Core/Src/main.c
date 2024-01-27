@@ -65,10 +65,11 @@ static void MX_TIM2_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
-	if(huart -> Instance == USART2 ){
+	if(huart->Instance == USART2){
 		HAL_UART_Transmit(&huart2, &temp, 1, 50);
 		buffer[index_buffer++] = temp;
-		if(index_buffer == MAX_BUFFER_SIZE) index_buffer = 0;
+		if(index_buffer == 30) index_buffer = 0;
+
 		buffer_flag = 1;
 		HAL_UART_Receive_IT(&huart2, &temp, 1);
 	}
@@ -109,31 +110,32 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_UART_Receive_IT (&huart2 , &temp , 1) ;
   HAL_TIM_Base_Start_IT(&htim2);
-  setTimer1(10);
-  setTimer2(100);
-  HAL_ADC_Start(&hadc1);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  setTimer1(21);
+  setTimer2(31);
+  setTimer3(51);
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	if(timer2_flag==1){
+	if(timer1_flag==1){
 		HAL_GPIO_TogglePin(LED_YELLOW_GPIO_Port, LED_YELLOW_Pin);
-		setTimer2(100);
+		setTimer1(500);
 	}
 
-	ADC_Value = HAL_ADC_GetValue(&hadc1);
 
 	if(buffer_flag == 1){
-		command_parser_fsm();
 		buffer_flag = 0;
+		command_parser_fsm();
 	}
 
 	uart_communication_fsm();
+
   }
   /* USER CODE END 3 */
 }
